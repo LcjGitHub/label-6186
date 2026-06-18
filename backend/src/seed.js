@@ -1,17 +1,34 @@
 import db from './db.js';
 
 /**
- * 写入 MVP 种子数据（3 个片夹及若干单张描述）
+ * 写入 MVP 种子数据（示例分类、3 个片夹及若干单张描述）
  */
 export function seedDatabase() {
-  const count = db.prepare('SELECT COUNT(*) AS count FROM folders').get().count;
-  if (count > 0) {
+  const folderCount = db.prepare('SELECT COUNT(*) AS count FROM folders').get().count;
+  if (folderCount > 0) {
     return;
   }
 
+  const insertCategory = db.prepare(`
+    INSERT INTO categories (name, color)
+    VALUES (@name, @color)
+  `);
+
+  const categories = [
+    { name: '城市纪实', color: '#3b82f6' },
+    { name: '旅行风景', color: '#22c55e' },
+    { name: '人物生活', color: '#f97316' },
+  ];
+
+  const categoryIds = {};
+  for (const cat of categories) {
+    const result = insertCategory.run(cat);
+    categoryIds[cat.name] = result.lastInsertRowid;
+  }
+
   const insertFolder = db.prepare(`
-    INSERT INTO folders (code, theme, era, storage_location)
-    VALUES (@code, @theme, @era, @storage_location)
+    INSERT INTO folders (code, theme, era, storage_location, category_id)
+    VALUES (@code, @theme, @era, @storage_location, @category_id)
   `);
 
   const insertSlide = db.prepare(`
@@ -25,6 +42,7 @@ export function seedDatabase() {
       theme: '八十年代城市风貌',
       era: '1980年代',
       storage_location: 'A柜-第2层-左3',
+      category_id: categoryIds['城市纪实'],
       slides: [
         { sequence: 1, description: '上海外滩夜景，黄浦江两岸灯火' },
         { sequence: 2, description: '南京路步行街人流与霓虹招牌' },
@@ -36,6 +54,7 @@ export function seedDatabase() {
       theme: '家庭旅行纪念',
       era: '1995年',
       storage_location: 'B柜-第1层-中2',
+      category_id: categoryIds['旅行风景'],
       slides: [
         { sequence: 1, description: '黄山迎客松前全家合影' },
         { sequence: 2, description: '山顶云海与日出' },
@@ -46,6 +65,7 @@ export function seedDatabase() {
       theme: '校园青春纪实',
       era: '2001年',
       storage_location: 'C柜-第3层-右1',
+      category_id: categoryIds['人物生活'],
       slides: [
         { sequence: 1, description: '毕业典礼上抛掷学士帽' },
         { sequence: 2, description: '图书馆台阶上的班级合影' },
@@ -63,6 +83,7 @@ export function seedDatabase() {
         theme: folder.theme,
         era: folder.era,
         storage_location: folder.storage_location,
+        category_id: folder.category_id,
       });
       for (const slide of folder.slides) {
         insertSlide.run({
@@ -77,5 +98,5 @@ export function seedDatabase() {
     db.exec('ROLLBACK');
     throw err;
   }
-  console.log('Seed data inserted: 3 folders');
+  console.log('Seed data inserted: 3 categories, 3 folders');
 }

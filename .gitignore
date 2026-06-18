@@ -133,3 +133,5 @@ tmp/
 # App data
 history_snapshots.json
 data/*.db
+data/*.db-shm
+data/*.db-wal

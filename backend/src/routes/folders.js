@@ -62,6 +62,22 @@ router.get('/:id', (req, res) => {
   res.json({ ...mapFolder(row), slides });
 });
 
+/**
+ * 校验分类ID是否存在
+ * @param {number|null} categoryId
+ * @returns {object|null} 错误对象或 null
+ */
+function validateCategory(categoryId) {
+  if (!categoryId) return null;
+  const exists = db
+    .prepare('SELECT 1 FROM categories WHERE id = ?')
+    .get(categoryId);
+  if (!exists) {
+    return { status: 400, error: '所选分类不存在' };
+  }
+  return null;
+}
+
 /** POST /api/folders - 新建片夹 */
 router.post('/', (req, res) => {
   const { code, theme, era, storage_location, category_id } = req.body;
@@ -71,6 +87,11 @@ router.post('/', (req, res) => {
   }
 
   const catId = category_id || null;
+
+  const catError = validateCategory(catId);
+  if (catError) {
+    return res.status(catError.status).json({ error: catError.error });
+  }
 
   try {
     const result = db
@@ -109,6 +130,11 @@ router.put('/:id', (req, res) => {
   }
 
   const catId = category_id === undefined ? existing.category_id : (category_id || null);
+
+  const catError = validateCategory(catId);
+  if (catError) {
+    return res.status(catError.status).json({ error: catError.error });
+  }
 
   try {
     db.prepare(

@@ -214,8 +214,8 @@
     </div>
     <div>
       <Label for="category">所属分类</Label>
-      <Select id="category" bind:value={form.category_id}>
-        <option value="">（无分类）</option>
+      <Select id="category" bind:value={form.category_id} placeholder="">
+        <option value="">无分类</option>
         {#each $categoriesQuery.data ?? [] as cat (cat.id)}
           <option value={cat.id}>{cat.name}</option>
         {/each}
