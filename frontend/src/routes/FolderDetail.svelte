@@ -27,8 +27,14 @@
     fetchFolderBorrows,
   } from '../lib/folders.js';
 
-  /** @type {{ folderId: number, onback: () => void }} */
-  let { folderId, onback } = $props();
+  /** @type {{ folderId: number, onback: () => void, highlightSlideId?: number | null }} */
+  let { folderId, onback, highlightSlideId = null } = $props();
+
+  let localHighlightId = $state(null);
+
+  $effect(() => {
+    localHighlightId = highlightSlideId;
+  });
 
   const queryClient = useQueryClient();
 
@@ -53,6 +59,22 @@
   $effect(() => {
     if (folderId != null) {
       loadFolder();
+    }
+  });
+
+  $effect(() => {
+    if (folderData?.slides && localHighlightId) {
+      // 查找高亮单张
+      setTimeout(() => {
+        const element = document.getElementById(`slide-${localHighlightId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        // 3秒后取消高亮
+        setTimeout(() => {
+          localHighlightId = null;
+        }, 3000);
+      }, 100);
     }
   });
 
@@ -335,7 +357,14 @@
         </TableHead>
         <TableBody>
           {#each folder.slides as slide (slide.id)}
-            <TableBodyRow>
+            <TableBodyRow
+              id="slide-{slide.id}"
+              class={
+                localHighlightId === slide.id
+                  ? '!bg-yellow-100 !bg-opacity-50 transition-all duration-500'
+                  : ''
+              }
+            >
               <TableBodyCell class="font-medium">{slide.sequence}</TableBodyCell>
               <TableBodyCell>{slide.description}</TableBodyCell>
               <TableBodyCell class="text-right">

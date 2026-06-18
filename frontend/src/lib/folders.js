@@ -29,6 +29,13 @@ import api from './api.js';
  */
 
 /**
+ * @typedef {Object} SearchResult
+ * @property {Folder[]} folders
+ * @property {Array<Slide & { folder: { id: number, code: string, theme: string } }>} slides
+ * @property {number} total
+ */
+
+/**
  * 获取片夹列表
  * @returns {Promise<Folder[]>}
  */
@@ -155,5 +162,15 @@ export async function createBorrow(payload) {
 
 export async function returnBorrow(id, actual_return_date) {
   const { data } = await api.put(`/borrows/${id}/return`, { actual_return_date });
+  return data;
+}
+
+/**
+ * 全局搜索
+ * @param {string} keyword
+ * @returns {Promise<SearchResult>}
+ */
+export async function search(keyword) {
+  const { data } = await api.get('/search', { params: { q: keyword } });
   return data;
 }
