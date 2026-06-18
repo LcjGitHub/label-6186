@@ -142,7 +142,12 @@
           </button>
         </div>
       </div>
-      <SearchBar onsearch={handleSearch} />
+      <div class={
+        'relative flex-1 max-w-md rounded-lg transition ' +
+        (view === 'search' ? 'ring-2 ring-blue-500 ring-offset-1' : '')
+      }>
+        <SearchBar onsearch={handleSearch} initialValue={searchKeyword} />
+      </div>
     </div>
   </nav>
 
