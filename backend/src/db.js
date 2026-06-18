@@ -21,13 +21,22 @@ db.exec('PRAGMA foreign_keys = ON');
  */
 export function initSchema() {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT NOT NULL DEFAULT '#3b82f6',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL UNIQUE,
       theme TEXT NOT NULL,
       era TEXT NOT NULL,
       storage_location TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      category_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS slides (
@@ -40,6 +49,17 @@ export function initSchema() {
       UNIQUE (folder_id, sequence)
     );
   `);
+
+  const columns = db
+    .prepare("PRAGMA table_info(folders)")
+    .all()
+    .map((c) => c.name);
+  if (!columns.includes("category_id")) {
+    db.exec(`
+      ALTER TABLE folders ADD COLUMN category_id INTEGER
+      REFERENCES categories(id) ON DELETE SET NULL
+    `);
+  }
 }
 
 /**

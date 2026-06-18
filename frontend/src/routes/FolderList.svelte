@@ -11,6 +11,7 @@
     Modal,
     Label,
     Input,
+    Select,
     Alert,
     Spinner,
   } from 'flowbite-svelte';
@@ -20,6 +21,7 @@
     createFolder,
     updateFolder,
     deleteFolder,
+    fetchCategories,
   } from '../lib/folders.js';
 
   /** @type {{ onselect: (id: number) => void }} */
@@ -32,17 +34,29 @@
     queryFn: fetchFolders,
   });
 
+  const categoriesQuery = createQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+  });
+
   let showModal = $state(false);
   let editingId = $state(null);
-  let form = $state({ code: '', theme: '', era: '', storage_location: '' });
+  let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '' });
   let formError = $state('');
 
   const saveMutation = createMutation({
     mutationFn: async () => {
+      const payload = {
+        code: form.code,
+        theme: form.theme,
+        era: form.era,
+        storage_location: form.storage_location,
+        category_id: form.category_id ? Number(form.category_id) : null,
+      };
       if (editingId) {
-        return updateFolder(editingId, form);
+        return updateFolder(editingId, payload);
       }
-      return createFolder(form);
+      return createFolder(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
@@ -62,7 +76,7 @@
 
   function openCreate() {
     editingId = null;
-    form = { code: '', theme: '', era: '', storage_location: '' };
+    form = { code: '', theme: '', era: '', storage_location: '', category_id: '' };
     formError = '';
     showModal = true;
   }
@@ -78,6 +92,7 @@
       theme: folder.theme,
       era: folder.era,
       storage_location: folder.storage_location,
+      category_id: folder.category_id ? String(folder.category_id) : '',
     };
     formError = '';
     showModal = true;
@@ -131,6 +146,7 @@
       <TableHead>
         <TableHeadCell>编号</TableHeadCell>
         <TableHeadCell>主题</TableHeadCell>
+        <TableHeadCell>分类</TableHeadCell>
         <TableHeadCell>张数</TableHeadCell>
         <TableHeadCell>年代</TableHeadCell>
         <TableHeadCell>存储位置</TableHeadCell>
@@ -144,6 +160,19 @@
           >
             <TableBodyCell class="font-medium text-blue-600">{folder.code}</TableBodyCell>
             <TableBodyCell>{folder.theme}</TableBodyCell>
+            <TableBodyCell>
+              {#if folder.category}
+                <span class="inline-flex items-center gap-1.5">
+                  <span
+                    class="h-3 w-3 rounded-full border border-gray-300"
+                    style="background-color: {folder.category.color}"
+                  ></span>
+                  <span class="text-sm text-gray-700">{folder.category.name}</span>
+                </span>
+              {:else}
+                <span class="text-sm text-gray-400">—</span>
+              {/if}
+            </TableBodyCell>
             <TableBodyCell>{folder.slide_count}</TableBodyCell>
             <TableBodyCell>{folder.era}</TableBodyCell>
             <TableBodyCell>{folder.storage_location}</TableBodyCell>
@@ -182,6 +211,15 @@
     <div>
       <Label for="theme">主题</Label>
       <Input id="theme" bind:value={form.theme} required placeholder="片夹主题" />
+    </div>
+    <div>
+      <Label for="category">所属分类</Label>
+      <Select id="category" bind:value={form.category_id}>
+        <option value="">（无分类）</option>
+        {#each $categoriesQuery.data ?? [] as cat (cat.id)}
+          <option value={cat.id}>{cat.name}</option>
+        {/each}
+      </Select>
     </div>
     <div>
       <Label for="era">年代</Label>

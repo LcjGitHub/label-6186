@@ -1,12 +1,22 @@
 import api from './api.js';
 
 /**
+ * @typedef {Object} Category
+ * @property {number} id
+ * @property {string} name
+ * @property {string} color
+ * @property {string} created_at
+ */
+
+/**
  * @typedef {Object} Folder
  * @property {number} id
  * @property {string} code
  * @property {string} theme
  * @property {string} era
  * @property {string} storage_location
+ * @property {number|null} category_id
+ * @property {Category|null} category
  * @property {number} slide_count
  */
 
@@ -90,4 +100,40 @@ export async function updateSlide(id, payload) {
  */
 export async function deleteSlide(id) {
   await api.delete(`/slides/${id}`);
+}
+
+/**
+ * 获取分类列表
+ * @returns {Promise<Category[]>}
+ */
+export async function fetchCategories() {
+  const { data } = await api.get('/categories');
+  return data;
+}
+
+/**
+ * 创建分类
+ * @param {{ name: string, color?: string }} payload
+ */
+export async function createCategory(payload) {
+  const { data } = await api.post('/categories', payload);
+  return data;
+}
+
+/**
+ * 更新分类
+ * @param {number|string} id
+ * @param {{ name: string, color?: string }} payload
+ */
+export async function updateCategory(id, payload) {
+  const { data } = await api.put(`/categories/${id}`, payload);
+  return data;
+}
+
+/**
+ * 删除分类
+ * @param {number|string} id
+ */
+export async function deleteCategory(id) {
+  await api.delete(`/categories/${id}`);
 }

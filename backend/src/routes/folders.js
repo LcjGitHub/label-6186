@@ -4,7 +4,20 @@ import db, { getSlideCount } from '../db.js';
 const router = Router();
 
 /**
- * 将片夹行映射为 API 响应（含张数）
+ * 获取分类信息
+ * @param {number|null} categoryId
+ * @returns {object|null}
+ */
+function getCategory(categoryId) {
+  if (!categoryId) return null;
+  const row = db
+    .prepare('SELECT id, name, color FROM categories WHERE id = ?')
+    .get(categoryId);
+  return row || null;
+}
+
+/**
+ * 将片夹行映射为 API 响应（含张数和分类）
  * @param {object} row
  * @returns {object}
  */
@@ -15,6 +28,8 @@ function mapFolder(row) {
     theme: row.theme,
     era: row.era,
     storage_location: row.storage_location,
+    category_id: row.category_id || null,
+    category: getCategory(row.category_id),
     slide_count: getSlideCount(row.id),
     created_at: row.created_at,
   };
@@ -49,18 +64,20 @@ router.get('/:id', (req, res) => {
 
 /** POST /api/folders - 新建片夹 */
 router.post('/', (req, res) => {
-  const { code, theme, era, storage_location } = req.body;
+  const { code, theme, era, storage_location, category_id } = req.body;
 
   if (!code || !theme || !era || !storage_location) {
     return res.status(400).json({ error: '请填写编号、主题、年代、存储位置' });
   }
 
+  const catId = category_id || null;
+
   try {
     const result = db
       .prepare(
-        'INSERT INTO folders (code, theme, era, storage_location) VALUES (?, ?, ?, ?)'
+        'INSERT INTO folders (code, theme, era, storage_location, category_id) VALUES (?, ?, ?, ?, ?)'
       )
-      .run(code, theme, era, storage_location);
+      .run(code, theme, era, storage_location, catId);
 
     const row = db
       .prepare('SELECT * FROM folders WHERE id = ?')
@@ -85,16 +102,18 @@ router.put('/:id', (req, res) => {
     return res.status(404).json({ error: '片夹不存在' });
   }
 
-  const { code, theme, era, storage_location } = req.body;
+  const { code, theme, era, storage_location, category_id } = req.body;
 
   if (!code || !theme || !era || !storage_location) {
     return res.status(400).json({ error: '请填写编号、主题、年代、存储位置' });
   }
 
+  const catId = category_id === undefined ? existing.category_id : (category_id || null);
+
   try {
     db.prepare(
-      'UPDATE folders SET code = ?, theme = ?, era = ?, storage_location = ? WHERE id = ?'
-    ).run(code, theme, era, storage_location, req.params.id);
+      'UPDATE folders SET code = ?, theme = ?, era = ?, storage_location = ?, category_id = ? WHERE id = ?'
+    ).run(code, theme, era, storage_location, catId, req.params.id);
 
     const row = db
       .prepare('SELECT * FROM folders WHERE id = ?')
