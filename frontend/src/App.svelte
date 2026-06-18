@@ -1,11 +1,12 @@
 <script>
+  import Dashboard from './routes/Dashboard.svelte';
   import FolderList from './routes/FolderList.svelte';
   import FolderDetail from './routes/FolderDetail.svelte';
   import CategoryList from './routes/CategoryList.svelte';
   import BorrowList from './routes/BorrowList.svelte';
 
-  /** @type {'folders' | 'detail' | 'categories' | 'borrows'} */
-  let view = $state('folders');
+  /** @type {'dashboard' | 'folders' | 'detail' | 'categories' | 'borrows'} */
+  let view = $state('dashboard');
   /** @type {number | null} */
   let selectedId = $state(null);
 
@@ -16,6 +17,11 @@
   function openDetail(id) {
     selectedId = id;
     view = 'detail';
+  }
+
+  function goToDashboard() {
+    view = 'dashboard';
+    selectedId = null;
   }
 
   function goToFolders() {
@@ -46,6 +52,18 @@
           幻灯片片夹管理
         </button>
         <div class="flex gap-1">
+          <button
+            type="button"
+            class={
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition ' +
+              (view === 'dashboard'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-100')
+            }
+            onclick={goToDashboard}
+          >
+            统计看板
+          </button>
           <button
             type="button"
             class={
@@ -89,7 +107,9 @@
   </nav>
 
   <main class="mx-auto max-w-6xl px-4 py-6">
-    {#if view === 'folders'}
+    {#if view === 'dashboard'}
+      <Dashboard />
+    {:else if view === 'folders'}
       <FolderList onselect={openDetail} />
     {:else if view === 'detail' && selectedId}
       <FolderDetail folderId={selectedId} onback={goToFolders} />
