@@ -137,3 +137,23 @@ export async function updateCategory(id, payload) {
 export async function deleteCategory(id) {
   await api.delete(`/categories/${id}`);
 }
+
+export async function fetchActiveBorrows() {
+  const { data } = await api.get('/borrows/active');
+  return data;
+}
+
+export async function fetchFolderBorrows(folderId) {
+  const { data } = await api.get(`/borrows/folder/${folderId}`);
+  return data;
+}
+
+export async function createBorrow(payload) {
+  const { data } = await api.post('/borrows', payload);
+  return data;
+}
+
+export async function returnBorrow(id, actual_return_date) {
+  const { data } = await api.put(`/borrows/${id}/return`, { actual_return_date });
+  return data;
+}

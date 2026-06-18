@@ -2,8 +2,9 @@
   import FolderList from './routes/FolderList.svelte';
   import FolderDetail from './routes/FolderDetail.svelte';
   import CategoryList from './routes/CategoryList.svelte';
+  import BorrowList from './routes/BorrowList.svelte';
 
-  /** @type {'folders' | 'detail' | 'categories'} */
+  /** @type {'folders' | 'detail' | 'categories' | 'borrows'} */
   let view = $state('folders');
   /** @type {number | null} */
   let selectedId = $state(null);
@@ -24,6 +25,11 @@
 
   function goToCategories() {
     view = 'categories';
+    selectedId = null;
+  }
+
+  function goToBorrows() {
+    view = 'borrows';
     selectedId = null;
   }
 </script>
@@ -64,6 +70,18 @@
           >
             分类管理
           </button>
+          <button
+            type="button"
+            class={
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition ' +
+              (view === 'borrows'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-100')
+            }
+            onclick={goToBorrows}
+          >
+            借阅登记
+          </button>
         </div>
       </div>
       <span class="text-sm text-gray-500">片夹与分类管理</span>
@@ -77,6 +95,8 @@
       <FolderDetail folderId={selectedId} onback={goToFolders} />
     {:else if view === 'categories'}
       <CategoryList />
+    {:else if view === 'borrows'}
+      <BorrowList onselect={openDetail} />
     {/if}
   </main>
 </div>

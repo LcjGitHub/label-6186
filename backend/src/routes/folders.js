@@ -59,7 +59,13 @@ router.get('/:id', (req, res) => {
     )
     .all(row.id);
 
-  res.json({ ...mapFolder(row), slides });
+  const activeBorrow = db
+    .prepare(
+      'SELECT id, borrower, borrow_date, expected_return_date FROM borrow_records WHERE folder_id = ? AND actual_return_date IS NULL'
+    )
+    .get(row.id);
+
+  res.json({ ...mapFolder(row), slides, active_borrow: activeBorrow || null });
 });
 
 /**

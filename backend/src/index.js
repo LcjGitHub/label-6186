@@ -5,6 +5,7 @@ import { seedDatabase } from './seed.js';
 import foldersRouter from './routes/folders.js';
 import slidesRouter from './routes/slides.js';
 import categoriesRouter from './routes/categories.js';
+import borrowsRouter from './routes/borrows.js';
 
 const PORT = 8000;
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/folders', foldersRouter);
 app.use('/api/folders', slidesRouter);
 app.use('/api/slides', slidesRouter);
+app.use('/api/borrows', borrowsRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

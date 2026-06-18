@@ -22,6 +22,9 @@
     createSlide,
     updateSlide,
     deleteSlide,
+    createBorrow,
+    returnBorrow,
+    fetchFolderBorrows,
   } from '../lib/folders.js';
 
   /** @type {{ folderId: number, onback: () => void }} */
@@ -122,6 +125,108 @@
       $deleteSlideMutation.mutate(id);
     }
   }
+
+  let showBorrowModal = $state(false);
+  let borrowForm = $state({ borrower: '', borrow_date: '', expected_return_date: '' });
+  let borrowError = $state('');
+
+  let showReturnModal = $state(false);
+  let returnBorrowId = $state(null);
+  let returnDate = $state('');
+  let returnError = $state('');
+
+  let borrowHistory = $state([]);
+  let borrowHistoryLoading = $state(false);
+
+  const borrowMutation = createMutation({
+    mutationFn: async () => {
+      return createBorrow({
+        folder_id: folderId,
+        borrower: borrowForm.borrower,
+        borrow_date: borrowForm.borrow_date,
+        expected_return_date: borrowForm.expected_return_date,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['active-borrows'] });
+      loadFolder();
+      closeBorrowModal();
+    },
+    onError: (err) => {
+      borrowError = err.response?.data?.error || '借出登记失败';
+    },
+  });
+
+  const returnMutation = createMutation({
+    mutationFn: async () => {
+      return returnBorrow(returnBorrowId, returnDate || undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['active-borrows'] });
+      loadFolder();
+      closeReturnModal();
+    },
+    onError: (err) => {
+      returnError = err.response?.data?.error || '归还登记失败';
+    },
+  });
+
+  async function loadBorrowHistory() {
+    borrowHistoryLoading = true;
+    try {
+      borrowHistory = await fetchFolderBorrows(folderId);
+    } catch {
+      borrowHistory = [];
+    } finally {
+      borrowHistoryLoading = false;
+    }
+  }
+
+  function openBorrowModal() {
+    borrowForm = {
+      borrower: '',
+      borrow_date: new Date().toISOString().slice(0, 10),
+      expected_return_date: '',
+    };
+    borrowError = '';
+    showBorrowModal = true;
+  }
+
+  function closeBorrowModal() {
+    showBorrowModal = false;
+    borrowError = '';
+  }
+
+  function handleBorrowSubmit(event) {
+    event.preventDefault();
+    borrowError = '';
+    $borrowMutation.mutate();
+  }
+
+  function openReturnModal(borrowId) {
+    returnBorrowId = borrowId;
+    returnDate = new Date().toISOString().slice(0, 10);
+    returnError = '';
+    showReturnModal = true;
+  }
+
+  function closeReturnModal() {
+    showReturnModal = false;
+    returnError = '';
+  }
+
+  function handleReturnSubmit(event) {
+    event.preventDefault();
+    returnError = '';
+    $returnMutation.mutate();
+  }
+
+  function isOverdue(expectedDate) {
+    if (!expectedDate) return false;
+    return new Date(expectedDate) < new Date(new Date().toISOString().slice(0, 10));
+  }
 </script>
 
 <Button color="light" class="mb-4 gap-2" onclick={onback}>
@@ -174,12 +279,40 @@
             <dt class="text-gray-500">存储位置</dt>
             <dd class="font-medium text-gray-900">{folder.storage_location}</dd>
           </div>
+          <div>
+            <dt class="text-gray-500">借阅状态</dt>
+            <dd class="font-medium">
+              {#if folder.active_borrow}
+                {#if isOverdue(folder.active_borrow.expected_return_date)}
+                  <Badge color="red">已逾期</Badge>
+                {:else}
+                  <Badge color="yellow">借出中</Badge>
+                {/if}
+                <span class="ml-2 text-sm text-gray-600">
+                  {folder.active_borrow.borrower} 借出于 {folder.active_borrow.borrow_date}，预计归还 {folder.active_borrow.expected_return_date}
+                </span>
+              {:else}
+                <Badge color="green">在库</Badge>
+              {/if}
+            </dd>
+          </div>
         </dl>
       </div>
-      <Button onclick={openCreateSlide} class="gap-2">
-        <PlusOutline class="h-4 w-4" />
-        添加单张
-      </Button>
+      <div class="flex gap-2">
+        {#if folder.active_borrow}
+          <Button color="green" onclick={() => openReturnModal(folder.active_borrow.id)}>
+            登记归还
+          </Button>
+        {:else}
+          <Button color="yellow" onclick={openBorrowModal}>
+            登记借出
+          </Button>
+        {/if}
+        <Button onclick={openCreateSlide} class="gap-2">
+          <PlusOutline class="h-4 w-4" />
+          添加单张
+        </Button>
+      </div>
     </div>
   </div>
 
@@ -219,6 +352,50 @@
       </Table>
     </div>
   {/if}
+
+  <div class="mt-8 mb-3 flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-900">借阅记录</h2>
+    <Button size="sm" color="light" onclick={loadBorrowHistory}>查看历史</Button>
+  </div>
+
+  {#if borrowHistoryLoading}
+    <div class="flex justify-center py-8">
+      <Spinner size="6" />
+    </div>
+  {:else if borrowHistory.length > 0}
+    <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+      <Table>
+        <TableHead>
+          <TableHeadCell>借阅人</TableHeadCell>
+          <TableHeadCell>借出日期</TableHeadCell>
+          <TableHeadCell>预计归还</TableHeadCell>
+          <TableHeadCell>实际归还</TableHeadCell>
+          <TableHeadCell>状态</TableHeadCell>
+        </TableHead>
+        <TableBody>
+          {#each borrowHistory as record (record.id)}
+            <TableBodyRow>
+              <TableBodyCell class="font-medium">{record.borrower}</TableBodyCell>
+              <TableBodyCell>{record.borrow_date}</TableBodyCell>
+              <TableBodyCell>{record.expected_return_date}</TableBodyCell>
+              <TableBodyCell>{record.actual_return_date ?? '—'}</TableBodyCell>
+              <TableBodyCell>
+                {#if record.actual_return_date}
+                  <Badge color="green">已归还</Badge>
+                {:else if isOverdue(record.expected_return_date)}
+                  <Badge color="red">已逾期</Badge>
+                {:else}
+                  <Badge color="yellow">借出中</Badge>
+                {/if}
+              </TableBodyCell>
+            </TableBodyRow>
+          {/each}
+        </TableBody>
+      </Table>
+    </div>
+  {:else}
+    <p class="text-sm text-gray-400">暂无借阅记录</p>
+  {/if}
 {/if}
 
 <Modal bind:open={showSlideModal} size="md" autoclose={false}>
@@ -256,6 +433,58 @@
       <Button color="alternative" type="button" onclick={closeSlideModal}>取消</Button>
       <Button type="submit" disabled={$saveSlideMutation.isPending}>
         {$saveSlideMutation.isPending ? '保存中…' : '保存'}
+      </Button>
+    </div>
+  </form>
+</Modal>
+
+<Modal bind:open={showBorrowModal} size="md" autoclose={false}>
+  <form onsubmit={handleBorrowSubmit} class="space-y-4">
+    <h3 class="text-lg font-semibold text-gray-900">登记借出</h3>
+
+    {#if borrowError}
+      <Alert color="red">{borrowError}</Alert>
+    {/if}
+
+    <div>
+      <Label for="fd-borrower">借阅人</Label>
+      <Input id="fd-borrower" bind:value={borrowForm.borrower} required placeholder="借阅人姓名" />
+    </div>
+    <div>
+      <Label for="fd-borrow-date">借出日期</Label>
+      <Input id="fd-borrow-date" type="date" bind:value={borrowForm.borrow_date} required />
+    </div>
+    <div>
+      <Label for="fd-expected-return">预计归还日期</Label>
+      <Input id="fd-expected-return" type="date" bind:value={borrowForm.expected_return_date} required />
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <Button color="alternative" type="button" onclick={closeBorrowModal}>取消</Button>
+      <Button type="submit" disabled={$borrowMutation.isPending}>
+        {$borrowMutation.isPending ? '处理中…' : '确认借出'}
+      </Button>
+    </div>
+  </form>
+</Modal>
+
+<Modal bind:open={showReturnModal} size="md" autoclose={false}>
+  <form onsubmit={handleReturnSubmit} class="space-y-4">
+    <h3 class="text-lg font-semibold text-gray-900">登记归还</h3>
+
+    {#if returnError}
+      <Alert color="red">{returnError}</Alert>
+    {/if}
+
+    <div>
+      <Label for="fd-return-date">实际归还日期</Label>
+      <Input id="fd-return-date" type="date" bind:value={returnDate} required />
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <Button color="alternative" type="button" onclick={closeReturnModal}>取消</Button>
+      <Button type="submit" color="green" disabled={$returnMutation.isPending}>
+        {$returnMutation.isPending ? '处理中…' : '确认归还'}
       </Button>
     </div>
   </form>

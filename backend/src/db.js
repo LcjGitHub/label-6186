@@ -48,6 +48,17 @@ export function initSchema() {
       FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
       UNIQUE (folder_id, sequence)
     );
+
+    CREATE TABLE IF NOT EXISTS borrow_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      folder_id INTEGER NOT NULL,
+      borrower TEXT NOT NULL,
+      borrow_date TEXT NOT NULL,
+      expected_return_date TEXT NOT NULL,
+      actual_return_date TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
+    );
   `);
 
   const columns = db
