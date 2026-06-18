@@ -19,6 +19,7 @@
   import { PlusOutline, TrashBinOutline } from 'flowbite-svelte-icons';
   import {
     fetchFolders,
+    fetchFolder,
     createFolder,
     updateFolder,
     deleteFolder,
@@ -42,22 +43,29 @@
 
   let showModal = $state(false);
   let editingId = $state(null);
+  let loadingRemarks = $state(false);
+  let originalRemarks = $state(null);
   let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '', remarks: '' });
   let formError = $state('');
 
   const saveMutation = createMutation({
     mutationFn: async () => {
+      /** @type {Record<string, any>} */
       const payload = {
         code: form.code,
         theme: form.theme,
         era: form.era,
         storage_location: form.storage_location,
         category_id: form.category_id ? Number(form.category_id) : null,
-        remarks: form.remarks || null,
       };
       if (editingId) {
+        const currentRemarks = form.remarks || null;
+        if (currentRemarks !== originalRemarks) {
+          payload.remarks = currentRemarks;
+        }
         return updateFolder(editingId, payload);
       }
+      payload.remarks = form.remarks || null;
       return createFolder(payload);
     },
     onSuccess: () => {
@@ -88,19 +96,38 @@
   /**
    * @param {import('../lib/folders.js').Folder} folder
    */
-  function openEdit(folder, event) {
+  async function openEdit(folder, event) {
     event.stopPropagation();
     editingId = folder.id;
-    form = {
-      code: folder.code,
-      theme: folder.theme,
-      era: folder.era,
-      storage_location: folder.storage_location,
-      category_id: folder.category_id ? String(folder.category_id) : '',
-      remarks: folder.remarks || '',
-    };
+    loadingRemarks = true;
     formError = '';
-    showModal = true;
+    try {
+      const detail = await fetchFolder(folder.id);
+      originalRemarks = detail.remarks || null;
+      form = {
+        code: folder.code,
+        theme: folder.theme,
+        era: folder.era,
+        storage_location: folder.storage_location,
+        category_id: folder.category_id ? String(folder.category_id) : '',
+        remarks: detail.remarks || '',
+      };
+      showModal = true;
+    } catch (err) {
+      formError = err.response?.data?.error || '加载备注失败';
+      originalRemarks = null;
+      form = {
+        code: folder.code,
+        theme: folder.theme,
+        era: folder.era,
+        storage_location: folder.storage_location,
+        category_id: folder.category_id ? String(folder.category_id) : '',
+        remarks: '',
+      };
+      showModal = true;
+    } finally {
+      loadingRemarks = false;
+    }
   }
 
   function closeModal() {
@@ -241,12 +268,19 @@
     </div>
     <div>
       <Label for="remarks">备注</Label>
-      <Textarea
-        id="remarks"
-        bind:value={form.remarks}
-        rows="4"
-        placeholder="补充说明保管情况或来源信息"
-      />
+      {#if loadingRemarks}
+        <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-6 text-center text-sm text-gray-400">
+          <Spinner size="4" class="mx-auto mb-2" />
+          加载备注中…
+        </div>
+      {:else}
+        <Textarea
+          id="remarks"
+          bind:value={form.remarks}
+          rows="4"
+          placeholder="补充说明保管情况或来源信息"
+        />
+      {/if}
     </div>
 
     <div class="flex justify-end gap-2 pt-2">

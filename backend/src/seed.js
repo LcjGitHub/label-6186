@@ -27,8 +27,8 @@ export function seedDatabase() {
   }
 
   const insertFolder = db.prepare(`
-    INSERT INTO folders (code, theme, era, storage_location, category_id)
-    VALUES (@code, @theme, @era, @storage_location, @category_id)
+    INSERT INTO folders (code, theme, era, storage_location, remarks, category_id)
+    VALUES (@code, @theme, @era, @storage_location, @remarks, @category_id)
   `);
 
   const insertSlide = db.prepare(`
@@ -42,6 +42,7 @@ export function seedDatabase() {
       theme: '八十年代城市风貌',
       era: '1980年代',
       storage_location: 'A柜-第2层-左3',
+      remarks: '由原市档案馆于2019年移交，保存状况良好，部分片框边缘有轻微泛黄。来源为1985年城市风貌摄影展参展作品。',
       category_id: categoryIds['城市纪实'],
       slides: [
         { sequence: 1, description: '上海外滩夜景，黄浦江两岸灯火' },
@@ -54,6 +55,7 @@ export function seedDatabase() {
       theme: '家庭旅行纪念',
       era: '1995年',
       storage_location: 'B柜-第1层-中2',
+      remarks: '私人捐赠，为王姓家族1995年夏季度假所摄。色彩饱和度佳，无霉斑。',
       category_id: categoryIds['旅行风景'],
       slides: [
         { sequence: 1, description: '黄山迎客松前全家合影' },
@@ -65,6 +67,7 @@ export function seedDatabase() {
       theme: '校园青春纪实',
       era: '2001年',
       storage_location: 'C柜-第3层-右1',
+      remarks: null,
       category_id: categoryIds['人物生活'],
       slides: [
         { sequence: 1, description: '毕业典礼上抛掷学士帽' },
@@ -84,6 +87,7 @@ export function seedDatabase() {
         theme: folder.theme,
         era: folder.era,
         storage_location: folder.storage_location,
+        remarks: folder.remarks,
         category_id: folder.category_id,
       });
       folderIds[folder.code] = result.lastInsertRowid;
