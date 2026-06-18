@@ -16,12 +16,13 @@
     TableHead,
     TableHeadCell,
   } from 'flowbite-svelte';
-  import { ArrowLeftOutline, PlusOutline, TrashBinOutline } from 'flowbite-svelte-icons';
+  import { ArrowLeftOutline, PlusOutline, TrashBinOutline, ChevronUpOutline, ChevronDownOutline } from 'flowbite-svelte-icons';
   import {
     fetchFolder,
     createSlide,
     updateSlide,
     deleteSlide,
+    moveSlide,
     createBorrow,
     returnBorrow,
     fetchFolderBorrows,
@@ -110,6 +111,40 @@
       loadFolder();
     },
   });
+
+  let movingSlideId = $state(null);
+
+  const moveSlideMutation = createMutation({
+    mutationFn: async ({ id, direction }) => {
+      movingSlideId = id;
+      try {
+        const result = await moveSlide(id, direction);
+        return result;
+      } finally {
+        movingSlideId = null;
+      }
+    },
+    onSuccess: (data) => {
+      if (folderData && data?.slides) {
+        folderData = { ...folderData, slides: data.slides };
+      }
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+    },
+    onError: (err) => {
+      alert(err.response?.data?.error || '移动失败');
+    },
+  });
+
+  /**
+   * @param {{ id: number, sequence: number }} slide
+   * @param {'up'|'down'} direction
+   */
+  function handleMoveSlide(slide, direction) {
+    const slides = folderData?.slides ?? [];
+    if (direction === 'up' && slide.sequence <= 1) return;
+    if (direction === 'down' && slide.sequence >= slides.length) return;
+    $moveSlideMutation.mutate({ id: slide.id, direction });
+  }
 
   function openCreateSlide() {
     const slides = folderData?.slides ?? [];
@@ -431,10 +466,12 @@
         <TableHead>
           <TableHeadCell class="w-24">序号</TableHeadCell>
           <TableHeadCell>描述</TableHeadCell>
-          <TableHeadCell class="w-32 text-right">操作</TableHeadCell>
+          <TableHeadCell class="w-56 text-right">操作</TableHeadCell>
         </TableHead>
         <TableBody>
           {#each folder.slides as slide (slide.id)}
+            {@const isFirst = slide.sequence === 1}
+            {@const isLast = slide.sequence === folder.slides.length}
             <TableBodyRow
               id="slide-{slide.id}"
               class={
@@ -446,17 +483,42 @@
               <TableBodyCell class="font-medium">{slide.sequence}</TableBodyCell>
               <TableBodyCell>{slide.description}</TableBodyCell>
               <TableBodyCell class="text-right">
-                <Button size="xs" color="light" onclick={() => openEditSlide(slide)}>
-                  编辑
-                </Button>
-                <Button
-                  size="xs"
-                  color="red"
-                  class="ml-2"
-                  onclick={() => handleDeleteSlide(slide.id)}
-                >
-                  <TrashBinOutline class="h-3 w-3" />
-                </Button>
+                <div class="inline-flex items-center gap-1 justify-end">
+                  <Button
+                    size="xs"
+                    color="light"
+                    title="上移"
+                    disabled={isFirst || movingSlideId === slide.id}
+                    onclick={() => handleMoveSlide(slide, 'up')}
+                  >
+                    <ChevronUpOutline class="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="xs"
+                    color="light"
+                    title="下移"
+                    disabled={isLast || movingSlideId === slide.id}
+                    onclick={() => handleMoveSlide(slide, 'down')}
+                  >
+                    <ChevronDownOutline class="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="xs"
+                    color="light"
+                    onclick={() => openEditSlide(slide)}
+                    class="ml-1"
+                  >
+                    编辑
+                  </Button>
+                  <Button
+                    size="xs"
+                    color="red"
+                    class="ml-1"
+                    onclick={() => handleDeleteSlide(slide.id)}
+                  >
+                    <TrashBinOutline class="h-3 w-3" />
+                  </Button>
+                </div>
               </TableBodyCell>
             </TableBodyRow>
           {/each}

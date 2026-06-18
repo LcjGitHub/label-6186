@@ -123,6 +123,17 @@ export async function deleteSlide(id) {
 }
 
 /**
+ * 移动单张（上移或下移），交换相邻单张的序号
+ * @param {number|string} id - 单张ID
+ * @param {'up'|'down'} direction - 移动方向
+ * @returns {Promise<{ slides: Slide[] }>} - 返回该 folder 下排序后的全部单张
+ */
+export async function moveSlide(id, direction) {
+  const { data } = await api.patch(`/slides/${id}/move`, { direction });
+  return data;
+}
+
+/**
  * 获取分类列表
  * @returns {Promise<Category[]>}
  */

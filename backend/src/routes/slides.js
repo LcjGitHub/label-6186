@@ -87,4 +87,78 @@ router.delete('/:id', (req, res) => {
   res.status(204).send();
 });
 
+/**
+ * PATCH /api/slides/:id/move - 调整单张序号（上移/下移）
+ * body: { direction: 'up' | 'down' }
+ */
+router.patch('/:id/move', (req, res) => {
+  const slideId = Number(req.params.id);
+  const { direction } = req.body;
+
+  if (direction !== 'up' && direction !== 'down') {
+    return res.status(400).json({ error: 'direction 参数必须是 up 或 down' });
+  }
+
+  const current = db
+    .prepare('SELECT * FROM slides WHERE id = ?')
+    .get(slideId);
+
+  if (!current) {
+    return res.status(404).json({ error: '单张不存在' });
+  }
+
+  const { folder_id, sequence } = current;
+  const targetSequence = direction === 'up' ? sequence - 1 : sequence + 1;
+
+  const neighbor = db
+    .prepare(
+      'SELECT * FROM slides WHERE folder_id = ? AND sequence = ?'
+    )
+    .get(folder_id, targetSequence);
+
+  if (!neighbor) {
+    return res
+      .status(400)
+      .json({ error: direction === 'up' ? '已经是第一张，无法上移' : '已经是最后一张，无法下移' });
+  }
+
+  try {
+    db.exec('BEGIN');
+
+    const tempSequence = -1;
+
+    db.prepare('UPDATE slides SET sequence = ? WHERE id = ?').run(
+      tempSequence,
+      neighbor.id
+    );
+
+    db.prepare('UPDATE slides SET sequence = ? WHERE id = ?').run(
+      targetSequence,
+      current.id
+    );
+
+    db.prepare('UPDATE slides SET sequence = ? WHERE id = ?').run(
+      sequence,
+      neighbor.id
+    );
+
+    db.exec('COMMIT');
+
+    const slides = db
+      .prepare(
+        'SELECT id, folder_id, sequence, description, created_at FROM slides WHERE folder_id = ? ORDER BY sequence ASC'
+      )
+      .all(folder_id);
+
+    res.json({ slides });
+  } catch (err) {
+    try {
+      db.exec('ROLLBACK');
+    } catch (_e) {
+      // rollback failed, ignore
+    }
+    throw err;
+  }
+});
+
 export default router;
