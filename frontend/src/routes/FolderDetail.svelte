@@ -16,7 +16,7 @@
     TableHead,
     TableHeadCell,
   } from 'flowbite-svelte';
-  import { ArrowLeftOutline, PlusOutline, TrashBinOutline, ChevronUpOutline, ChevronDownOutline } from 'flowbite-svelte-icons';
+  import { ArrowLeftOutline, PlusOutline, TrashBinOutline } from 'flowbite-svelte-icons';
   import {
     fetchFolder,
     createSlide,
@@ -113,10 +113,12 @@
   });
 
   let movingSlideId = $state(null);
+  let moveError = $state('');
 
   const moveSlideMutation = createMutation({
     mutationFn: async ({ id, direction }) => {
       movingSlideId = id;
+      moveError = '';
       try {
         const result = await moveSlide(id, direction);
         return result;
@@ -131,7 +133,7 @@
       queryClient.invalidateQueries({ queryKey: ['folders'] });
     },
     onError: (err) => {
-      alert(err.response?.data?.error || '移动失败');
+      moveError = err.response?.data?.error || '移动失败';
     },
   });
 
@@ -141,8 +143,9 @@
    */
   function handleMoveSlide(slide, direction) {
     const slides = folderData?.slides ?? [];
-    if (direction === 'up' && slide.sequence <= 1) return;
-    if (direction === 'down' && slide.sequence >= slides.length) return;
+    const index = slides.findIndex((s) => s.id === slide.id);
+    if (direction === 'up' && index <= 0) return;
+    if (direction === 'down' && index >= slides.length - 1) return;
     $moveSlideMutation.mutate({ id: slide.id, direction });
   }
 
@@ -458,6 +461,10 @@
 
   <h2 class="mb-3 text-lg font-semibold text-gray-900">单张描述列表</h2>
 
+  {#if moveError}
+    <Alert color="red" class="mb-3">{moveError}</Alert>
+  {/if}
+
   {#if folder.slides.length === 0}
     <Alert color="yellow">该片夹暂无单张，点击「添加单张」录入描述</Alert>
   {:else}
@@ -466,12 +473,12 @@
         <TableHead>
           <TableHeadCell class="w-24">序号</TableHeadCell>
           <TableHeadCell>描述</TableHeadCell>
-          <TableHeadCell class="w-56 text-right">操作</TableHeadCell>
+          <TableHeadCell class="w-72 text-right">操作</TableHeadCell>
         </TableHead>
         <TableBody>
-          {#each folder.slides as slide (slide.id)}
-            {@const isFirst = slide.sequence === 1}
-            {@const isLast = slide.sequence === folder.slides.length}
+          {#each folder.slides as slide, index (slide.id)}
+            {@const isFirst = index === 0}
+            {@const isLast = index === folder.slides.length - 1}
             <TableBodyRow
               id="slide-{slide.id}"
               class={
@@ -487,33 +494,29 @@
                   <Button
                     size="xs"
                     color="light"
-                    title="上移"
                     disabled={isFirst || movingSlideId === slide.id}
                     onclick={() => handleMoveSlide(slide, 'up')}
                   >
-                    <ChevronUpOutline class="h-3 w-3" />
+                    上移
                   </Button>
                   <Button
                     size="xs"
                     color="light"
-                    title="下移"
                     disabled={isLast || movingSlideId === slide.id}
                     onclick={() => handleMoveSlide(slide, 'down')}
                   >
-                    <ChevronDownOutline class="h-3 w-3" />
+                    下移
                   </Button>
                   <Button
                     size="xs"
                     color="light"
                     onclick={() => openEditSlide(slide)}
-                    class="ml-1"
                   >
                     编辑
                   </Button>
                   <Button
                     size="xs"
                     color="red"
-                    class="ml-1"
                     onclick={() => handleDeleteSlide(slide.id)}
                   >
                     <TrashBinOutline class="h-3 w-3" />

@@ -74,8 +74,48 @@ router.put('/:id', (req, res) => {
   }
 });
 
-/** DELETE /api/slides/:id - 删除单张 */
+/**
+ * 将片夹下所有单张按当前 sequence 排序后，重新从 1 开始连续编号
+ * @param {number} folderId
+ */
+function renumberFolderSlides(folderId) {
+  const slides = db
+    .prepare(
+      'SELECT id FROM slides WHERE folder_id = ? ORDER BY sequence ASC, id ASC'
+    )
+    .all(folderId);
+
+  if (slides.length <= 1) return;
+
+  try {
+    db.exec('BEGIN');
+    const updateStmt = db.prepare('UPDATE slides SET sequence = ? WHERE id = ?');
+    slides.forEach((slide, index) => {
+      updateStmt.run(index + 1, slide.id);
+    });
+    db.exec('COMMIT');
+  } catch (err) {
+    try {
+      db.exec('ROLLBACK');
+    } catch (_e) {
+      // ignore
+    }
+    throw err;
+  }
+}
+
+/** DELETE /api/slides/:id - 删除单张（删除后对该片夹剩余单张重新从1连续编号） */
 router.delete('/:id', (req, res) => {
+  const existing = db
+    .prepare('SELECT * FROM slides WHERE id = ?')
+    .get(req.params.id);
+
+  if (!existing) {
+    return res.status(404).json({ error: '单张不存在' });
+  }
+
+  const folderId = existing.folder_id;
+
   const result = db
     .prepare('DELETE FROM slides WHERE id = ?')
     .run(req.params.id);
@@ -84,12 +124,15 @@ router.delete('/:id', (req, res) => {
     return res.status(404).json({ error: '单张不存在' });
   }
 
+  renumberFolderSlides(folderId);
+
   res.status(204).send();
 });
 
 /**
  * PATCH /api/slides/:id/move - 调整单张序号（上移/下移）
  * body: { direction: 'up' | 'down' }
+ * 按排序列表中的位置找相邻项，而非固定序号±1
  */
 router.patch('/:id/move', (req, res) => {
   const slideId = Number(req.params.id);
@@ -107,20 +150,27 @@ router.patch('/:id/move', (req, res) => {
     return res.status(404).json({ error: '单张不存在' });
   }
 
-  const { folder_id, sequence } = current;
-  const targetSequence = direction === 'up' ? sequence - 1 : sequence + 1;
+  const { folder_id } = current;
 
-  const neighbor = db
+  const allSlides = db
     .prepare(
-      'SELECT * FROM slides WHERE folder_id = ? AND sequence = ?'
+      'SELECT id, sequence FROM slides WHERE folder_id = ? ORDER BY sequence ASC, id ASC'
     )
-    .get(folder_id, targetSequence);
+    .all(folder_id);
 
-  if (!neighbor) {
-    return res
-      .status(400)
-      .json({ error: direction === 'up' ? '已经是第一张，无法上移' : '已经是最后一张，无法下移' });
+  const currentIndex = allSlides.findIndex((s) => s.id === slideId);
+
+  if (direction === 'up' && currentIndex <= 0) {
+    return res.status(400).json({ error: '已经是第一张，无法上移' });
   }
+  if (direction === 'down' && currentIndex >= allSlides.length - 1) {
+    return res.status(400).json({ error: '已经是最后一张，无法下移' });
+  }
+
+  const neighborIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  const neighbor = allSlides[neighborIndex];
+  const currentSequence = current.sequence;
+  const neighborSequence = neighbor.sequence;
 
   try {
     db.exec('BEGIN');
@@ -133,12 +183,12 @@ router.patch('/:id/move', (req, res) => {
     );
 
     db.prepare('UPDATE slides SET sequence = ? WHERE id = ?').run(
-      targetSequence,
+      neighborSequence,
       current.id
     );
 
     db.prepare('UPDATE slides SET sequence = ? WHERE id = ?').run(
-      sequence,
+      currentSequence,
       neighbor.id
     );
 
