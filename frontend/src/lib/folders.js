@@ -38,10 +38,15 @@ import api from './api.js';
 
 /**
  * 获取片夹列表
+ * @param {string} [keyword] - 可选，按主题模糊搜索
  * @returns {Promise<Folder[]>}
  */
-export async function fetchFolders() {
-  const { data } = await api.get('/folders');
+export async function fetchFolders(keyword) {
+  const params = {};
+  if (keyword && keyword.trim()) {
+    params.keyword = keyword.trim();
+  }
+  const { data } = await api.get('/folders', { params });
   return data;
 }
 

@@ -50,11 +50,19 @@ function mapFolder(row, includeRemarks = false) {
   return base;
 }
 
-/** GET /api/folders - 片夹列表 */
-router.get('/', (_req, res) => {
-  const rows = db
-    .prepare('SELECT * FROM folders ORDER BY code ASC')
-    .all();
+/** GET /api/folders - 片夹列表（支持 keyword 按主题模糊搜索） */
+router.get('/', (req, res) => {
+  const { keyword } = req.query;
+  let rows;
+  if (keyword && keyword.trim()) {
+    rows = db
+      .prepare('SELECT * FROM folders WHERE theme LIKE ? ORDER BY code ASC')
+      .all(`%${keyword.trim()}%`);
+  } else {
+    rows = db
+      .prepare('SELECT * FROM folders ORDER BY code ASC')
+      .all();
+  }
   res.json(rows.map(mapFolder));
 });
 

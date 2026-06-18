@@ -15,8 +15,9 @@
     Textarea,
     Alert,
     Spinner,
+    TextInput,
   } from 'flowbite-svelte';
-  import { PlusOutline, TrashBinOutline } from 'flowbite-svelte-icons';
+  import { PlusOutline, TrashBinOutline, SearchOutline } from 'flowbite-svelte-icons';
   import {
     fetchFolders,
     fetchFolder,
@@ -31,11 +32,6 @@
 
   const queryClient = useQueryClient();
 
-  const foldersQuery = createQuery({
-    queryKey: ['folders'],
-    queryFn: fetchFolders,
-  });
-
   const categoriesQuery = createQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
@@ -45,8 +41,25 @@
   let editingId = $state(null);
   let loadingRemarks = $state(false);
   let originalRemarks = $state(null);
+  let searchInput = $state('');
+  let searchKeyword = $state('');
   let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '', remarks: '' });
   let formError = $state('');
+
+  const foldersQuery = createQuery({
+    queryKey: ['folders', searchKeyword],
+    queryFn: () => fetchFolders(searchKeyword),
+  });
+
+  function doSearch() {
+    searchKeyword = searchInput;
+  }
+
+  function handleSearchKeydown(event) {
+    if (event.key === 'Enter') {
+      doSearch();
+    }
+  }
 
   const saveMutation = createMutation({
     mutationFn: async () => {
@@ -164,6 +177,19 @@
   </Button>
 </div>
 
+<div class="mb-4 flex items-center gap-2">
+  <TextInput
+    bind:value={searchInput}
+    placeholder="按主题关键词搜索…"
+    class="max-w-sm"
+    onkeydown={handleSearchKeydown}
+  />
+  <Button size="sm" onclick={doSearch}>
+    <SearchOutline class="h-4 w-4 mr-1" />
+    搜索
+  </Button>
+</div>
+
 {#if $foldersQuery.isLoading}
   <div class="flex justify-center py-16">
     <Spinner size="8" />
@@ -171,7 +197,11 @@
 {:else if $foldersQuery.isError}
   <Alert color="red">加载失败，请确认后端已启动（端口 8000）</Alert>
 {:else if ($foldersQuery.data ?? []).length === 0}
-  <Alert color="yellow">暂无片夹，点击「新建片夹」添加</Alert>
+  {#if searchKeyword}
+    <Alert color="yellow">未找到主题包含「{searchKeyword}」的片夹</Alert>
+  {:else}
+    <Alert color="yellow">暂无片夹，点击「新建片夹」添加</Alert>
+  {/if}
 {:else}
   <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
     <Table hoverable>
