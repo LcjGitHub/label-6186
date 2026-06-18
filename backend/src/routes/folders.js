@@ -59,7 +59,12 @@ router.get('/', (req, res) => {
   const sortBy = allowedSortBy.includes(sort_by) ? sort_by : 'code';
   const sortOrder = sort_order === 'desc' ? 'DESC' : 'ASC';
 
-  const orderColumn = sortBy === 'slide_count' ? 'slide_count' : 'f.code';
+  let orderClause;
+  if (sortBy === 'slide_count') {
+    orderClause = `slide_count ${sortOrder}, f.code ASC`;
+  } else {
+    orderClause = `f.code ${sortOrder}`;
+  }
 
   const baseSql = `
     SELECT f.*, COALESCE(s.count, 0) AS slide_count
@@ -74,11 +79,11 @@ router.get('/', (req, res) => {
   let rows;
   if (keyword && keyword.trim()) {
     rows = db
-      .prepare(`${baseSql} WHERE f.theme LIKE ? ORDER BY ${orderColumn} ${sortOrder}`)
+      .prepare(`${baseSql} WHERE f.theme LIKE ? ORDER BY ${orderClause}`)
       .all(`%${keyword.trim()}%`);
   } else {
     rows = db
-      .prepare(`${baseSql} ORDER BY ${orderColumn} ${sortOrder}`)
+      .prepare(`${baseSql} ORDER BY ${orderClause}`)
       .all();
   }
 

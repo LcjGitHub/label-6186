@@ -64,17 +64,17 @@
 
   const foldersQuery = createQuery(foldersQueryOptions);
 
-  function toggleSort(column) {
-    if (sortBy === column) {
+  function toggleSlideCountSort() {
+    if (sortBy === 'slide_count') {
       sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     } else {
-      sortBy = column;
-      sortOrder = column === 'code' ? 'asc' : 'desc';
+      sortBy = 'slide_count';
+      sortOrder = 'asc';
     }
   }
 
-  function getSortIcon(column) {
-    if (sortBy !== column) return '↕';
+  function getSortIcon() {
+    if (sortBy !== 'slide_count') return '⇅';
     return sortOrder === 'asc' ? '↑' : '↓';
   }
 
@@ -243,13 +243,17 @@
   <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
     <Table hoverable>
       <TableHead>
-        <TableHeadCell class="cursor-pointer select-none hover:text-blue-600" onclick={() => toggleSort('code')}>
-          编号 {getSortIcon('code')}
-        </TableHeadCell>
+        <TableHeadCell>编号</TableHeadCell>
         <TableHeadCell>主题</TableHeadCell>
         <TableHeadCell>分类</TableHeadCell>
-        <TableHeadCell class="cursor-pointer select-none hover:text-blue-600" onclick={() => toggleSort('slide_count')}>
-          张数 {getSortIcon('slide_count')}
+        <TableHeadCell
+          class="cursor-pointer select-none font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+          onclick={toggleSlideCountSort}
+        >
+          <span class="inline-flex items-center gap-1">
+            张数
+            <span class="text-xs opacity-80">{getSortIcon()}</span>
+          </span>
         </TableHeadCell>
         <TableHeadCell>年代</TableHeadCell>
         <TableHeadCell>存储位置</TableHeadCell>
