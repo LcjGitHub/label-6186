@@ -77,6 +77,7 @@ export function seedDatabase() {
 
   db.exec('BEGIN');
   try {
+    const folderIds = {};
     for (const folder of seed) {
       const result = insertFolder.run({
         code: folder.code,
@@ -85,6 +86,7 @@ export function seedDatabase() {
         storage_location: folder.storage_location,
         category_id: folder.category_id,
       });
+      folderIds[folder.code] = result.lastInsertRowid;
       for (const slide of folder.slides) {
         insertSlide.run({
           folder_id: result.lastInsertRowid,
@@ -93,10 +95,32 @@ export function seedDatabase() {
         });
       }
     }
+
+    const insertBorrow = db.prepare(`
+      INSERT INTO borrow_records (folder_id, borrower, borrow_date, expected_return_date, actual_return_date)
+      VALUES (@folder_id, @borrower, @borrow_date, @expected_return_date, @actual_return_date)
+    `);
+
+    insertBorrow.run({
+      folder_id: folderIds['SF-001'],
+      borrower: '张老师',
+      borrow_date: '2025-05-10',
+      expected_return_date: '2025-06-10',
+      actual_return_date: '2025-06-08',
+    });
+
+    insertBorrow.run({
+      folder_id: folderIds['SF-002'],
+      borrower: '李同学',
+      borrow_date: new Date().toISOString().slice(0, 10),
+      expected_return_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      actual_return_date: null,
+    });
+
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
-  console.log('Seed data inserted: 3 categories, 3 folders');
+  console.log('Seed data inserted: 3 categories, 3 folders, 2 borrow records');
 }

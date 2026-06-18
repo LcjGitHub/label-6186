@@ -205,7 +205,7 @@
 
     <div>
       <Label for="borrow-folder">片夹</Label>
-      <Select id="borrow-folder" bind:value={borrowForm.folder_id} required>
+      <Select id="borrow-folder" bind:value={borrowForm.folder_id} required placeholder="">
         <option value="">请选择片夹</option>
         {#each ($foldersQuery.data ?? []).filter(f => !f.active_borrow) as folder (folder.id)}
           <option value={folder.id}>{folder.code} - {folder.theme}</option>

@@ -16,6 +16,15 @@ function getCategory(categoryId) {
   return row || null;
 }
 
+function getActiveBorrow(folderId) {
+  const row = db
+    .prepare(
+      'SELECT id, borrower, borrow_date, expected_return_date FROM borrow_records WHERE folder_id = ? AND actual_return_date IS NULL'
+    )
+    .get(folderId);
+  return row || null;
+}
+
 /**
  * 将片夹行映射为 API 响应（含张数和分类）
  * @param {object} row
@@ -31,6 +40,7 @@ function mapFolder(row) {
     category_id: row.category_id || null,
     category: getCategory(row.category_id),
     slide_count: getSlideCount(row.id),
+    active_borrow: getActiveBorrow(row.id),
     created_at: row.created_at,
   };
 }
@@ -59,13 +69,7 @@ router.get('/:id', (req, res) => {
     )
     .all(row.id);
 
-  const activeBorrow = db
-    .prepare(
-      'SELECT id, borrower, borrow_date, expected_return_date FROM borrow_records WHERE folder_id = ? AND actual_return_date IS NULL'
-    )
-    .get(row.id);
-
-  res.json({ ...mapFolder(row), slides, active_borrow: activeBorrow || null });
+  res.json({ ...mapFolder(row), slides });
 });
 
 /**

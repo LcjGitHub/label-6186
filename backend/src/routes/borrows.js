@@ -84,6 +84,10 @@ router.post('/', (req, res) => {
     return res.status(409).json({ error: '该片夹已有未归还的借阅记录' });
   }
 
+  if (new Date(expected_return_date) < new Date(borrow_date)) {
+    return res.status(400).json({ error: '预计归还日期不能早于借出日期' });
+  }
+
   const result = db
     .prepare(
       'INSERT INTO borrow_records (folder_id, borrower, borrow_date, expected_return_date) VALUES (?, ?, ?, ?)'
@@ -111,6 +115,10 @@ router.put('/:id/return', (req, res) => {
   }
 
   const returnDate = req.body.actual_return_date || new Date().toISOString().slice(0, 10);
+
+  if (new Date(returnDate) < new Date(existing.borrow_date)) {
+    return res.status(400).json({ error: '实际归还日期不能早于借出日期' });
+  }
 
   db.prepare(
     'UPDATE borrow_records SET actual_return_date = ? WHERE id = ?'

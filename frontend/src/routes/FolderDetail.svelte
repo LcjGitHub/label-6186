@@ -41,6 +41,7 @@
     folderError = '';
     try {
       folderData = await fetchFolder(folderId);
+      loadBorrowHistory();
     } catch (err) {
       folderError = err.response?.data?.error || '加载失败';
       folderData = null;
@@ -151,6 +152,7 @@
       queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ queryKey: ['active-borrows'] });
       loadFolder();
+      loadBorrowHistory();
       closeBorrowModal();
     },
     onError: (err) => {
@@ -166,6 +168,7 @@
       queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ queryKey: ['active-borrows'] });
       loadFolder();
+      loadBorrowHistory();
       closeReturnModal();
     },
     onError: (err) => {
@@ -355,7 +358,7 @@
 
   <div class="mt-8 mb-3 flex items-center justify-between">
     <h2 class="text-lg font-semibold text-gray-900">借阅记录</h2>
-    <Button size="sm" color="light" onclick={loadBorrowHistory}>查看历史</Button>
+    <Button size="sm" color="light" onclick={loadBorrowHistory}>刷新</Button>
   </div>
 
   {#if borrowHistoryLoading}
