@@ -15,7 +15,6 @@
     Textarea,
     Alert,
     Spinner,
-    TextInput,
   } from 'flowbite-svelte';
   import { PlusOutline, TrashBinOutline, SearchOutline } from 'flowbite-svelte-icons';
   import {
@@ -41,23 +40,30 @@
   let editingId = $state(null);
   let loadingRemarks = $state(false);
   let originalRemarks = $state(null);
-  let searchInput = $state('');
   let searchKeyword = $state('');
   let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '', remarks: '' });
   let formError = $state('');
 
+  /** @type {HTMLInputElement | null} */
+  let searchInputEl = null;
+
   const foldersQuery = createQuery({
-    queryKey: ['folders', searchKeyword],
+    queryKey: () => ['folders', searchKeyword],
     queryFn: () => fetchFolders(searchKeyword),
   });
 
-  function doSearch() {
-    searchKeyword = searchInput;
+  function doSearch(event) {
+    event.preventDefault();
+    if (searchInputEl) {
+      searchKeyword = searchInputEl.value.trim();
+    }
   }
 
   function handleSearchKeydown(event) {
-    if (event.key === 'Enter') {
-      doSearch();
+    if (event.key === 'Escape' && searchInputEl) {
+      searchInputEl.value = '';
+      searchKeyword = '';
+      searchInputEl.focus();
     }
   }
 
@@ -177,18 +183,23 @@
   </Button>
 </div>
 
-<div class="mb-4 flex items-center gap-2">
-  <TextInput
-    bind:value={searchInput}
-    placeholder="按主题关键词搜索…"
-    class="max-w-sm"
-    onkeydown={handleSearchKeydown}
-  />
-  <Button size="sm" onclick={doSearch}>
-    <SearchOutline class="h-4 w-4 mr-1" />
+<form onsubmit={doSearch} class="mb-4 flex items-center gap-2">
+  <div class="relative max-w-sm">
+    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+      <SearchOutline class="h-4 w-4 text-gray-400" />
+    </div>
+    <input
+      bind:this={searchInputEl}
+      type="text"
+      placeholder="按主题关键词搜索…"
+      onkeydown={handleSearchKeydown}
+      class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 pl-10 pr-4 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
+    />
+  </div>
+  <Button size="sm" type="submit">
     搜索
   </Button>
-</div>
+</form>
 
 {#if $foldersQuery.isLoading}
   <div class="flex justify-center py-16">
