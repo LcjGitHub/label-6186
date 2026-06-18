@@ -47,7 +47,7 @@
         <button
           type="button"
           class="text-xl font-semibold text-gray-900 hover:text-blue-600"
-          onclick={goToFolders}
+          onclick={goToDashboard}
         >
           幻灯片片夹管理
         </button>

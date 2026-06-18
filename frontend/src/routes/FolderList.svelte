@@ -60,6 +60,7 @@
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
       closeModal();
     },
     onError: (err) => {
@@ -71,6 +72,7 @@
     mutationFn: deleteFolder,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 

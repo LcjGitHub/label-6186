@@ -157,8 +157,3 @@ export async function returnBorrow(id, actual_return_date) {
   const { data } = await api.put(`/borrows/${id}/return`, { actual_return_date });
   return data;
 }
-
-export async function fetchStats() {
-  const { data } = await api.get('/stats');
-  return data;
-}

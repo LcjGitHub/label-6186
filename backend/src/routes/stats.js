@@ -14,7 +14,7 @@ router.get('/', (_req, res) => {
 
   const eraDistribution = db
     .prepare(
-      'SELECT era, COUNT(*) AS count FROM folders GROUP BY era ORDER BY count DESC'
+      'SELECT era, COUNT(*) AS count FROM folders GROUP BY era ORDER BY count DESC, era ASC'
     )
     .all()
     .map((row) => ({ era: row.era, count: row.count }));

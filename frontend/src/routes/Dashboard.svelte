@@ -4,9 +4,8 @@
   import {
     ArchiveOutline,
     ImageOutline,
-    CalendarMonthOutline,
   } from 'flowbite-svelte-icons';
-  import { fetchStats } from '../lib/folders.js';
+  import { fetchStats } from '../lib/stats.js';
 
   const statsQuery = createQuery({
     queryKey: ['stats'],
@@ -33,7 +32,7 @@
   {:else if $statsQuery.isError}
     <Alert color="red">加载失败，请确认后端已启动（端口 8000）</Alert>
   {:else}
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-4 md:grid-cols-2">
       <div
         class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
       >
@@ -62,22 +61,6 @@
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-gray-500">单张总数量</p>
             <p class="mt-1 text-3xl font-bold text-gray-900">{totalSlides}</p>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
-      >
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600"
-          >
-            <CalendarMonthOutline class="h-6 w-6" />
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium text-gray-500">涉及年代数</p>
-            <p class="mt-1 text-3xl font-bold text-gray-900">{eraDistribution.length}</p>
           </div>
         </div>
       </div>
