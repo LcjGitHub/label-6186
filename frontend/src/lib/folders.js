@@ -18,6 +18,7 @@ import api from './api.js';
  * @property {number|null} category_id
  * @property {Category|null} category
  * @property {number} slide_count
+ * @property {string|null} [remarks]
  */
 
 /**

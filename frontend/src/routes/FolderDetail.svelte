@@ -25,6 +25,7 @@
     createBorrow,
     returnBorrow,
     fetchFolderBorrows,
+    updateFolder,
   } from '../lib/folders.js';
 
   /** @type {{ folderId: number, onback: () => void, highlightSlideId?: number | null }} */
@@ -254,6 +255,49 @@
     if (!expectedDate) return false;
     return new Date(expectedDate) < new Date(new Date().toISOString().slice(0, 10));
   }
+
+  let editingRemarks = $state(false);
+  let remarksDraft = $state('');
+  let remarksError = $state('');
+
+  function openEditRemarks() {
+    remarksDraft = folderData?.remarks || '';
+    remarksError = '';
+    editingRemarks = true;
+  }
+
+  function cancelEditRemarks() {
+    editingRemarks = false;
+    remarksError = '';
+  }
+
+  const saveRemarksMutation = createMutation({
+    mutationFn: async () => {
+      return updateFolder(folderId, {
+        code: folderData.code,
+        theme: folderData.theme,
+        era: folderData.era,
+        storage_location: folderData.storage_location,
+        category_id: folderData.category_id,
+        remarks: remarksDraft || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      loadFolder();
+      editingRemarks = false;
+    },
+    onError: (err) => {
+      remarksError = err.response?.data?.error || '保存失败';
+    },
+  });
+
+  function handleSaveRemarks(event) {
+    event.preventDefault();
+    remarksError = '';
+    $saveRemarksMutation.mutate();
+  }
 </script>
 
 <Button color="light" class="mb-4 gap-2" onclick={onback}>
@@ -341,6 +385,40 @@
         </Button>
       </div>
     </div>
+  </div>
+
+  <div class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">备注</h2>
+      {#if !editingRemarks}
+        <Button size="sm" color="light" onclick={openEditRemarks}>编辑备注</Button>
+      {/if}
+    </div>
+
+    {#if editingRemarks}
+      <form onsubmit={handleSaveRemarks} class="space-y-3">
+        {#if remarksError}
+          <Alert color="red">{remarksError}</Alert>
+        {/if}
+        <Textarea
+          bind:value={remarksDraft}
+          rows="6"
+          placeholder="补充说明保管情况或来源信息"
+        />
+        <div class="flex justify-end gap-2">
+          <Button color="alternative" type="button" onclick={cancelEditRemarks}>取消</Button>
+          <Button type="submit" disabled={$saveRemarksMutation.isPending}>
+            {$saveRemarksMutation.isPending ? '保存中…' : '保存'}
+          </Button>
+        </div>
+      </form>
+    {:else if folder.remarks}
+      <div class="whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm text-gray-700 leading-relaxed">
+        {folder.remarks}
+      </div>
+    {:else}
+      <p class="text-sm text-gray-400">暂无备注，点击「编辑备注」添加补充说明</p>
+    {/if}
   </div>
 
   <h2 class="mb-3 text-lg font-semibold text-gray-900">单张描述列表</h2>

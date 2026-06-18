@@ -12,6 +12,7 @@
     Label,
     Input,
     Select,
+    Textarea,
     Alert,
     Spinner,
   } from 'flowbite-svelte';
@@ -41,7 +42,7 @@
 
   let showModal = $state(false);
   let editingId = $state(null);
-  let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '' });
+  let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '', remarks: '' });
   let formError = $state('');
 
   const saveMutation = createMutation({
@@ -52,6 +53,7 @@
         era: form.era,
         storage_location: form.storage_location,
         category_id: form.category_id ? Number(form.category_id) : null,
+        remarks: form.remarks || null,
       };
       if (editingId) {
         return updateFolder(editingId, payload);
@@ -78,7 +80,7 @@
 
   function openCreate() {
     editingId = null;
-    form = { code: '', theme: '', era: '', storage_location: '', category_id: '' };
+    form = { code: '', theme: '', era: '', storage_location: '', category_id: '', remarks: '' };
     formError = '';
     showModal = true;
   }
@@ -95,6 +97,7 @@
       era: folder.era,
       storage_location: folder.storage_location,
       category_id: folder.category_id ? String(folder.category_id) : '',
+      remarks: folder.remarks || '',
     };
     formError = '';
     showModal = true;
@@ -234,6 +237,15 @@
         bind:value={form.storage_location}
         required
         placeholder="如 A柜-第1层"
+      />
+    </div>
+    <div>
+      <Label for="remarks">备注</Label>
+      <Textarea
+        id="remarks"
+        bind:value={form.remarks}
+        rows="4"
+        placeholder="补充说明保管情况或来源信息"
       />
     </div>
 

@@ -34,6 +34,7 @@ export function initSchema() {
       theme TEXT NOT NULL,
       era TEXT NOT NULL,
       storage_location TEXT NOT NULL,
+      remarks TEXT,
       category_id INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
@@ -69,6 +70,11 @@ export function initSchema() {
     db.exec(`
       ALTER TABLE folders ADD COLUMN category_id INTEGER
       REFERENCES categories(id) ON DELETE SET NULL
+    `);
+  }
+  if (!columns.includes("remarks")) {
+    db.exec(`
+      ALTER TABLE folders ADD COLUMN remarks TEXT
     `);
   }
 }
