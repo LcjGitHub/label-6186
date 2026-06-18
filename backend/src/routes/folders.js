@@ -29,9 +29,10 @@ function getActiveBorrow(folderId) {
  * 将片夹行映射为 API 响应（含张数和分类）
  * @param {object} row
  * @param {boolean} includeRemarks 是否包含备注（列表接口不返回，详情接口返回）
+ * @param {number} [precomputedSlideCount] 预计算的张数，避免重复查询
  * @returns {object}
  */
-function mapFolder(row, includeRemarks = false) {
+function mapFolder(row, includeRemarks = false, precomputedSlideCount = undefined) {
   const base = {
     id: row.id,
     code: row.code,
@@ -40,7 +41,7 @@ function mapFolder(row, includeRemarks = false) {
     storage_location: row.storage_location,
     category_id: row.category_id || null,
     category: getCategory(row.category_id),
-    slide_count: getSlideCount(row.id),
+    slide_count: precomputedSlideCount !== undefined ? precomputedSlideCount : getSlideCount(row.id),
     active_borrow: getActiveBorrow(row.id),
     created_at: row.created_at,
   };
@@ -50,20 +51,38 @@ function mapFolder(row, includeRemarks = false) {
   return base;
 }
 
-/** GET /api/folders - 片夹列表（支持 keyword 按主题模糊搜索） */
+/** GET /api/folders - 片夹列表（支持 keyword 按主题模糊搜索，支持排序） */
 router.get('/', (req, res) => {
-  const { keyword } = req.query;
+  const { keyword, sort_by, sort_order } = req.query;
+
+  const allowedSortBy = ['code', 'slide_count'];
+  const sortBy = allowedSortBy.includes(sort_by) ? sort_by : 'code';
+  const sortOrder = sort_order === 'desc' ? 'DESC' : 'ASC';
+
+  const orderColumn = sortBy === 'slide_count' ? 'slide_count' : 'f.code';
+
+  const baseSql = `
+    SELECT f.*, COALESCE(s.count, 0) AS slide_count
+    FROM folders f
+    LEFT JOIN (
+      SELECT folder_id, COUNT(*) AS count
+      FROM slides
+      GROUP BY folder_id
+    ) s ON f.id = s.folder_id
+  `;
+
   let rows;
   if (keyword && keyword.trim()) {
     rows = db
-      .prepare('SELECT * FROM folders WHERE theme LIKE ? ORDER BY code ASC')
+      .prepare(`${baseSql} WHERE f.theme LIKE ? ORDER BY ${orderColumn} ${sortOrder}`)
       .all(`%${keyword.trim()}%`);
   } else {
     rows = db
-      .prepare('SELECT * FROM folders ORDER BY code ASC')
+      .prepare(`${baseSql} ORDER BY ${orderColumn} ${sortOrder}`)
       .all();
   }
-  res.json(rows.map(mapFolder));
+
+  res.json(rows.map((row) => mapFolder(row, false, row.slide_count)));
 });
 
 /** GET /api/folders/:id - 片夹详情（含单张列表） */

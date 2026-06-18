@@ -39,12 +39,19 @@ import api from './api.js';
 /**
  * 获取片夹列表
  * @param {string} [keyword] - 可选，按主题模糊搜索
+ * @param {{ sort_by?: string, sort_order?: string }} [options] - 可选，排序参数
  * @returns {Promise<Folder[]>}
  */
-export async function fetchFolders(keyword) {
+export async function fetchFolders(keyword, options = {}) {
   const params = {};
   if (keyword && keyword.trim()) {
     params.keyword = keyword.trim();
+  }
+  if (options.sort_by) {
+    params.sort_by = options.sort_by;
+  }
+  if (options.sort_order) {
+    params.sort_order = options.sort_order;
   }
   const { data } = await api.get('/folders', { params });
   return data;

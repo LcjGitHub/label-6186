@@ -1,4 +1,5 @@
 <script>
+  import { writable } from 'svelte/store';
   import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
   import {
     Table,
@@ -41,16 +42,41 @@
   let loadingRemarks = $state(false);
   let originalRemarks = $state(null);
   let searchKeyword = $state('');
+  let sortBy = $state('code');
+  let sortOrder = $state('asc');
   let form = $state({ code: '', theme: '', era: '', storage_location: '', category_id: '', remarks: '' });
   let formError = $state('');
 
   /** @type {HTMLInputElement | null} */
   let searchInputEl = null;
 
-  const foldersQuery = createQuery({
-    queryKey: () => ['folders', searchKeyword],
-    queryFn: () => fetchFolders(searchKeyword),
+  const foldersQueryOptions = writable({
+    queryKey: ['folders', searchKeyword, sortBy, sortOrder],
+    queryFn: () => fetchFolders(searchKeyword, { sort_by: sortBy, sort_order: sortOrder }),
   });
+
+  $effect(() => {
+    foldersQueryOptions.set({
+      queryKey: ['folders', searchKeyword, sortBy, sortOrder],
+      queryFn: () => fetchFolders(searchKeyword, { sort_by: sortBy, sort_order: sortOrder }),
+    });
+  });
+
+  const foldersQuery = createQuery(foldersQueryOptions);
+
+  function toggleSort(column) {
+    if (sortBy === column) {
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortBy = column;
+      sortOrder = column === 'code' ? 'asc' : 'desc';
+    }
+  }
+
+  function getSortIcon(column) {
+    if (sortBy !== column) return '↕';
+    return sortOrder === 'asc' ? '↑' : '↓';
+  }
 
   function doSearch(event) {
     event.preventDefault();
@@ -217,10 +243,14 @@
   <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
     <Table hoverable>
       <TableHead>
-        <TableHeadCell>编号</TableHeadCell>
+        <TableHeadCell class="cursor-pointer select-none hover:text-blue-600" onclick={() => toggleSort('code')}>
+          编号 {getSortIcon('code')}
+        </TableHeadCell>
         <TableHeadCell>主题</TableHeadCell>
         <TableHeadCell>分类</TableHeadCell>
-        <TableHeadCell>张数</TableHeadCell>
+        <TableHeadCell class="cursor-pointer select-none hover:text-blue-600" onclick={() => toggleSort('slide_count')}>
+          张数 {getSortIcon('slide_count')}
+        </TableHeadCell>
         <TableHeadCell>年代</TableHeadCell>
         <TableHeadCell>存储位置</TableHeadCell>
         <TableHeadCell class="text-right">操作</TableHeadCell>
